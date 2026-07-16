@@ -1,0 +1,38 @@
+# MLP VQ-VAE model config
+
+# Name of the model
+name: mlp
+
+# Input dimension (if jet-constituents-level 3, else 4)
+input_dim: 4
+
+# Hidden dimensions (one for each hidden layer)
+hidden_dims: 
+  - 128
+  - 128
+  - 128
+
+# Latent dimension (dimension of the codebook vectors)
+latent_dim: 4
+
+# Codebook size (how many codebook vectors)
+codebook_size: 256
+
+# Set the rotation trick (True/False) 
+# (If False the model uses STE)
+rotation_trick: True
+
+# Decay (VQ layer)
+decay: 0.8
+
+# Commitment weight
+beta: 0.9
+
+# Optional: dimensions of the encoder's hidden layers
+encoder_hidden_dims: 
+
+# Optional: dimensions of the decoder's hidden layers
+decoder_hidden_dims: 
+
+# True if you are working with jet-constituents-level data-loading, else False
+jet_features: False

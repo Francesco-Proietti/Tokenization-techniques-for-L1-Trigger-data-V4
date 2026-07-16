@@ -1,0 +1,28 @@
+# Event jets data-loading config
+
+# Name of the data-loading
+name: event_jets
+
+# Path to the train folder
+train_path: "/run/media/francesco/STORAGE/data_cern_2/Train"
+
+# Path to the validation folder
+val_path: "/run/media/francesco/STORAGE/data_cern_2/Val"
+
+# Path to the test folder
+test_path: "/run/media/francesco/STORAGE/data_cern_2/Test"
+
+# Select the features
+features:
+  - L1T_JetPuppiAK4_PT
+  - L1T_JetPuppiAK4_Eta
+  - L1T_JetPuppiAK4_Phi
+
+# Select the maximum number of jets per event
+max_jets: 16
+
+# Set the preprocessing (True/False)
+preprocessing: True
+
+# Number of workers
+num_workers: 0

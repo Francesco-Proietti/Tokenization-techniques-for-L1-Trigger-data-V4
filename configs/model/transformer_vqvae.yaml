@@ -1,0 +1,39 @@
+# Trnasformer VQ-VAE model config
+
+# Name of the model
+name: transformer
+
+# Input dimension (3 if jet-constituents-level, else 4)
+input_dim: 4
+
+# First projection
+hidden_dim: 128
+
+# Number of heads
+n_heads: 8
+
+# Dropout rate
+dropout: 0.1
+
+# Number of NormFormerBlocks
+depth: 4
+
+# Latent dimension (dimension of the codebook vectors)
+latent_dim: 8
+
+# Codebook size (how many codebook vectors)
+codebook_size: 512
+
+# Set the rotation trick (True/False)
+# (If False the model uses STE)
+rotation_trick: True
+
+# Decay (VQ layer)
+decay: 0.8
+
+# Commitment weight
+beta: 0.9
+
+# True if you are working with jet-constituents-level data-loading, else False
+jet_features: False
+

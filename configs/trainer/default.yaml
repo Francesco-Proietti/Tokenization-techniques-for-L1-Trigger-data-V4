@@ -1,0 +1,22 @@
+# Default trainer config
+
+# Number of epochs
+max_epochs: 30
+
+# Batch size
+batch_size: 32
+
+# Learning rate
+lr: 1e-4
+
+# Accelerator
+accelerator: auto
+
+# Device
+devices: auto
+
+# How many logs
+log_every_n_steps: 10
+
+# Seed for reproducibility
+seed: 42
