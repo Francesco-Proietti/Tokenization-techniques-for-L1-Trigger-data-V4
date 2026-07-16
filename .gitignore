@@ -226,5 +226,14 @@ checkpoints/
 # TensorBoard logs
 logs/
 
+# PyTorch Lightning GPT checkpoints
+checkpoints_GPT/
+
+# TensorBoard GPT logs
+logs_GPT/
+
+# Tokens 
+gpt_like/tokens
+
 # Hydra output
 outputs/
