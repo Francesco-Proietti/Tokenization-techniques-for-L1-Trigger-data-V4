@@ -235,5 +235,7 @@ logs_GPT/
 # Tokens 
 gpt_like/tokens
 
+gpt-like/tokens
+
 # Hydra output
 outputs/
