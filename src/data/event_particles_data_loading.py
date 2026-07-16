@@ -1,0 +1,286 @@
+"""
+Data-loading Implementation
+
+It consists of an IterableDataset and a Lightning DataModule
+"""
+
+from typing import Iterator, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
+import pyarrow.dataset as ds
+import torch
+from torch.utils.data import IterableDataset, get_worker_info
+import lightning as pl
+import random
+from collections import deque
+
+from pathlib import Path
+
+
+# Label mapping for classification
+LABEL_MAP = {
+    "minbias": 0,
+    "ggHbb": 1
+}
+
+# Function to extract label from file path (name of the folder)
+def extract_label(file_path):
+    process = Path(file_path).parent.name
+    return LABEL_MAP[process]
+
+
+class EventPartL1TriggerDataset(IterableDataset):
+    """
+    IterableDataset for L1-trigger data from parquet files.
+
+    Streams data lazily from parquet files instead of loading all into memory.
+    Each event contains PUPPI particles with features: pT, eta, phi.
+    """
+
+    def __init__(
+        self,
+        parquet_dirs: List[str],
+        max_particles: int = 128,
+        features: List[str] = ["L1T_PUPPIPart_PT", "L1T_PUPPIPart_Eta", "L1T_PUPPIPart_Phi", "L1T_PUPPIPart_PuppiW"],
+        puppiw_threshold: float = 0.05,
+        preprocessing: bool = True,
+        shuffling: bool = False,
+        labels: bool = False
+    ):
+        """
+        Initialize the dataset.
+
+        Args:
+            parquet_dirs: List of directories containing parquet files.
+            max_particles: Maximum number of particles per event.
+            features: List of feature to extract.
+            puppiw_threshold: Minimum PUPPI weight for particles.
+            preprocessing: Whether to apply preprocessing.
+            shuffling: Whether to shuffle the data.
+        """
+        super().__init__()
+
+        self.dataset = ds.dataset(parquet_dirs, format="parquet")
+        self.max_particles = max_particles
+        self.features = features
+        self.coords = features[:-1] #Exclude PuppiW from coordinates
+        self.puppiw_threshold = puppiw_threshold
+        self.preprocessing = preprocessing
+        self.shuffling = shuffling
+        self.labels = labels
+
+    def _process_event(self, row: pd.Series) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Process a single event row into padded features and mask.
+
+        Returns:
+            features: [max_particles, n_coords] tensor
+            mask: [max_particles] boolean tensor
+        """
+        n_coords = len(self.coords)
+
+        feats = np.zeros((self.max_particles, n_coords), dtype=np.float32)
+        mask = np.zeros(self.max_particles, dtype=bool)
+
+        # Apply puppiw filter
+        puppiw = row["L1T_PUPPIPart_PuppiW"]
+        valid_mask = np.array(puppiw) >= self.puppiw_threshold
+        
+        pt = np.array(row["L1T_PUPPIPart_PT"])[valid_mask]
+        eta = np.array(row["L1T_PUPPIPart_Eta"])[valid_mask]
+        phi = np.array(row["L1T_PUPPIPart_Phi"])[valid_mask]
+
+        n_particles = min(len(pt), self.max_particles)
+
+        feats[:n_particles, 0] = pt[:n_particles]
+        feats[:n_particles, 1] = eta[:n_particles]
+        feats[:n_particles, 2] = phi[:n_particles]
+
+        mask[:n_particles] = True
+
+        # Preprocessing 
+        if self.preprocessing:
+            
+            pt = np.log(pt + 1e-8) - 1.8  
+            eta = eta / 3
+            phi_sin = np.sin(phi)
+            phi_cos = np.cos(phi)
+
+            feats = np.zeros((self.max_particles, n_coords + 1), dtype=np.float32)
+            
+            feats[:n_particles, 0] = pt[:n_particles]
+            feats[:n_particles, 1] = eta[:n_particles]
+            feats[:n_particles, 2] = phi_sin[:n_particles]   
+            feats[:n_particles, 3] = phi_cos[:n_particles]
+        
+        return torch.FloatTensor(feats), torch.BoolTensor(mask)
+
+    def __iter__(self) -> Iterator[Tuple]:
+        """
+        Iterate over all events using pyarrow.dataset scanner.
+        """
+
+        worker_info = get_worker_info()
+
+        files = list(self.dataset.files) 
+
+        if self.shuffling:
+            random.shuffle(files)  
+
+        if worker_info is None:
+            assigned_files = files
+        else:
+            assigned_files = files[worker_info.id::worker_info.num_workers]
+        
+        buffer = [] 
+        buffer_size = 5000 
+        
+        for file_path in assigned_files:
+
+            label = extract_label(file_path)
+
+            dataset = ds.dataset(file_path, format="parquet")
+
+            scanner = dataset.scanner(
+                columns=self.features,
+                use_threads=True,
+            )
+
+            for batch in scanner.to_batches():
+
+                df = batch.to_pandas()
+
+                for i in range(len(df)):
+
+                    event = df.iloc[i] 
+
+                    puppiw = df.iloc[i]["L1T_PUPPIPart_PuppiW"]
+                    valid_mask = np.array(puppiw) >= self.puppiw_threshold
+                    pt = np.array(df.iloc[i]["L1T_PUPPIPart_PT"])[valid_mask]
+
+                    #if len(pt) > 0:
+                    #    yield self._process_event(df.iloc[i])
+
+                    if len(pt) == 0:
+                        continue
+                    
+                    if self.shuffling:
+
+                        buffer.append((event, label)) 
+                    
+                        if len(buffer) >= buffer_size:
+
+                            idx = random.randint(0, len(buffer)-1)
+
+                            event, label = buffer.pop(idx)
+
+                            if self.labels:
+                                yield self._process_event(event), label
+                            else:
+                                yield self._process_event(event)
+                    else:
+                        if self.labels:
+                            yield self._process_event(event), label
+                        else:
+                            yield self._process_event(event)
+
+        if self.shuffling:        
+            # Remaining events in buffer
+            while buffer:
+
+                idx = random.randint(0, len(buffer)-1)
+                event, label = buffer.pop(idx)
+
+                if self.labels:
+                    yield self._process_event(event), label
+                else:
+                    yield self._process_event(event)
+
+
+class EventPartL1TriggerDataModule(pl.LightningDataModule):
+    """
+    PyTorch Lightning DataModule for L1-trigger data.
+    """
+
+    def __init__(
+        self,
+        cfg,
+        batch_size: int = 32
+    ):
+        """
+        Initialize the DataModule.
+
+        Args:
+            parquet_dirs_train: Directories containing training parquet files.
+            parquet_dirs_val: Directories containing validation data.
+            parquet_dirs_test: Directories containing test data.
+            max_particles: Maximum particles per event.
+            batch_size: Batch size for dataloaders.
+            num_workers: Workers for dataloaders.
+            features: Features to extract.
+            puppiw_threshold: Minimum PUPPI weight.
+        """
+        super().__init__()
+
+        self.train_dirs = cfg.train_path
+        self.val_dirs = cfg.val_path or []
+        self.test_dirs = cfg.test_path or []
+        self.max_particles = cfg.max_particles
+        self.batch_size = batch_size
+        self.num_workers = cfg.num_workers
+        self.features = list(cfg.features)
+        self.puppiw_threshold = cfg.puppiw_threshold
+        self.preprocessing = cfg.preprocessing
+
+    def train_dataloader(self):
+        """Return training dataloader."""
+        self.train_dataset = EventPartL1TriggerDataset(
+            parquet_dirs=self.train_dirs,
+            max_particles=self.max_particles,
+            features=self.features,
+            puppiw_threshold=self.puppiw_threshold,
+            preprocessing=self.preprocessing,
+            shuffling=True
+        )
+        return torch.utils.data.DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=True
+            #drop_last=True,
+        )
+
+    def val_dataloader(self):
+        """Return validation dataloader."""
+        self.val_dataset = EventPartL1TriggerDataset(
+            parquet_dirs=self.val_dirs,
+            max_particles=self.max_particles,
+            features=self.features,
+            puppiw_threshold=self.puppiw_threshold,
+            preprocessing=self.preprocessing
+        )
+        return torch.utils.data.DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            #drop_last=True,
+        )
+
+    def test_dataloader(self):
+        """Return test dataloader."""
+        self.test_dataset = EventPartL1TriggerDataset(
+            parquet_dirs=self.test_dirs,
+            max_particles=self.max_particles,
+            features=self.features,
+            puppiw_threshold=self.puppiw_threshold,
+            preprocessing=self.preprocessing
+        )
+        return torch.utils.data.DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            #drop_last=True,
+        )
