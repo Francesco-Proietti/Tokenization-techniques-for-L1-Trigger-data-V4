@@ -1,0 +1,11 @@
+vocab_size: 514
+max_seq_len: 129
+pad_token: 512
+bos_token: 513
+d_model: 256
+n_layers: 4
+n_heads: 8
+mlp_ratio: 4
+dropout: 0.1
+lr: 0.0003
+weight_decay: 0.01
