@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import torchmetrics
 import lightning as pl
 
 
@@ -478,6 +478,233 @@ class GPTPretrainModule(pl.LightningModule):
             prog_bar=True,
             on_epoch=True,
             batch_size=x.size(0),
+        )
+
+    def configure_optimizers(self):
+
+        optimizer = torch.optim.AdamW(
+            self.parameters(),
+            lr=self.hparams.lr,
+            weight_decay=self.hparams.weight_decay,
+        )
+
+        return optimizer
+
+
+# GPT classifier lightning
+class GPTClassificationModule(pl.LightningModule):
+
+    def __init__(
+        self,
+        vocab_size,
+        max_seq_len,
+        pad_token,
+        bos_token,
+        d_model=256,
+        n_layers=4,
+        n_heads=8,
+        mlp_ratio=4,
+        dropout=0.1,
+        lr=3e-4,
+        weight_decay=1e-2,
+    ):
+        super().__init__()
+
+        self.save_hyperparameters()
+
+        self.model = GPTForClassification(
+            vocab_size=vocab_size,
+            max_seq_len=max_seq_len,
+            d_model=d_model,
+            n_layers=n_layers,
+            n_heads=n_heads,
+            mlp_ratio=mlp_ratio,
+            dropout=dropout,
+        )
+
+        self.loss_fn = nn.BCEWithLogitsLoss()
+
+        self.train_acc = torchmetrics.classification.BinaryAccuracy()
+        self.val_acc = torchmetrics.classification.BinaryAccuracy()
+        self.test_acc = torchmetrics.classification.BinaryAccuracy()
+
+    def forward(
+        self,
+        tokens,
+        mask,
+    ):
+        return self.model(tokens, mask)
+    
+    def _prepend_bos(self, tokens, attention_mask):
+        
+        B = tokens.size(0)
+
+        bos = torch.full(
+            (B, 1),
+            self.hparams.bos_token,
+            device=tokens.device,
+            dtype=tokens.dtype,
+        )
+
+        bos_mask = torch.ones(
+            (B, 1),
+            device=attention_mask.device,
+            dtype=torch.bool,
+        )
+
+        tokens = torch.cat(
+            [bos, tokens],
+            dim=1,
+        )
+
+        attention_mask = torch.cat(
+            [bos_mask, attention_mask],
+            dim=1,
+        )
+
+        return tokens, attention_mask
+    
+    def training_step(
+        self,
+        batch,
+        batch_idx,
+    ):
+
+        tokens = batch["tokens"]
+        mask = batch["mask"]
+
+        tokens, mask = self._prepend_bos(
+            tokens,
+            mask,
+        )
+
+        labels = batch["label"].float()
+
+        logits = self(
+            tokens,
+            mask,
+        )
+
+        loss = self.loss_fn(
+            logits,
+            labels,
+        )
+
+        preds = torch.sigmoid(logits)
+
+        self.train_acc(
+            preds,
+            labels.int(),
+        )
+
+        self.log(
+            "train_loss",
+            loss,
+            prog_bar=True,
+            on_step=True,
+            on_epoch=True,
+        )
+
+        self.log(
+            "train_acc",
+            self.train_acc,
+            prog_bar=True,
+            on_step=True,
+            on_epoch=True,
+        )
+
+        return loss
+    
+    def validation_step(
+        self,
+        batch,
+        batch_idx,
+    ):
+
+        tokens = batch["tokens"]
+        mask = batch["mask"]
+
+        tokens, mask = self._prepend_bos(
+            tokens,
+            mask,
+        )
+
+        labels = batch["label"].float()
+
+        logits = self(
+            tokens,
+            mask,
+        )
+
+        loss = self.loss_fn(
+            logits,
+            labels,
+        )
+
+        preds = torch.sigmoid(logits)
+
+        self.val_acc(
+            preds,
+            labels.int(),
+        )
+
+        self.log(
+            "val_loss",
+            loss,
+            prog_bar=True,
+            on_epoch=True,
+        )
+
+        self.log(
+            "val_acc",
+            self.val_acc,
+            prog_bar=True,
+            on_epoch=True,
+        )
+
+    def test_step(
+        self,
+        batch,
+        batch_idx,
+    ):
+
+        tokens = batch["tokens"]
+        mask = batch["mask"]
+
+        tokens, mask = self._prepend_bos(
+            tokens,
+            mask,
+        )
+
+        labels = batch["label"].float()
+
+        logits = self(
+            tokens,
+            mask,
+        )
+
+        loss = self.loss_fn(
+            logits,
+            labels,
+        )
+
+        preds = torch.sigmoid(logits)
+
+        self.test_acc(
+            preds,
+            labels.int(),
+        )
+
+        self.log(
+            "test_loss",
+            loss,
+            on_epoch=True,
+        )
+
+        self.log(
+            "test_acc",
+            self.test_acc,
+            on_epoch=True,
         )
 
     def configure_optimizers(self):

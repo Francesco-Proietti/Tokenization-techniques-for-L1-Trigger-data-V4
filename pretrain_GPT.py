@@ -34,7 +34,7 @@ def main():
 
     model = GPTPretrainModule(
         vocab_size=514,
-        max_seq_len=128,
+        max_seq_len=129,
         pad_token=512,
         bos_token=513,
         d_model=256,
