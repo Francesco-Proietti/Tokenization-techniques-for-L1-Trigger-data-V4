@@ -232,6 +232,12 @@ checkpoints_GPT/
 # TensorBoard GPT logs
 logs_GPT/
 
+# PyTorch Lightning GPT classifier checkpoints
+checkpoints_GPT_classifier/
+
+# TensorBoard GPT classifier logs
+logs_GPT_classifier/
+
 # Tokens 
 gpt_like/tokens
 
