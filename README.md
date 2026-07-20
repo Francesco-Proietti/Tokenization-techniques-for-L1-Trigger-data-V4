@@ -1,6 +1,7 @@
 # Tokenization Techniques for L1 Trigger Data - VQ-VAE Implementation
 
 This project implements Vector Quantized Variational Autoencoders (VQ-VAEs) for tokenizing and reconstructing L1 trigger data from high-energy physics experiments. The codebase provides two architecture variants—MLP-based and Transformer-based—configured via Hydra for easy experimentation.
+After training the VQ-VAE, a GPT-like model is adopted for classification.
 
 ## Overview
 
@@ -8,6 +9,7 @@ The project uses PyTorch Lightning and aims to:
 - Learn discrete token representations of particle flow data
 - Compare MLP and Transformer encoder/decoder architectures
 - Evaluate reconstruction quality using VQ-VAE with rotation trick or Straight-Through Estimation (STE)
+- Use the learned token with a GPT-like classifier
 
 ## Project Structure
 
@@ -15,8 +17,9 @@ The project uses PyTorch Lightning and aims to:
 
 | File | Description |
 |------|-------------|
-| `train.py` | Training script that orchestrates data loading, model initialization, and PyTorch Lightning training |
+| `train_VQ_VAE.py` | Training script that orchestrates data loading, model initialization, and PyTorch Lightning training |
 | `environment.yaml` | Conda environment specification with all dependencies |
+| `tokenizer.py` | Tokenization script that, given a lightning checkpoint, produces the tokens |
 
 ### Configuration Files (`configs/`)
 
@@ -27,7 +30,9 @@ The configuration system uses Hydra's compositional config pattern:
 | `configs/config.yaml` | Main config file combining model, data, and trainer configs |
 | `configs/model/mlp_vqvae.yaml` | MLP VQ-VAE hyperparameters (hidden dims, latent dim, codebook size) |
 | `configs/model/transformer_vqvae.yaml` | Transformer VQ-VAE hyperparameters (n_heads, depth, dropout) |
-| `configs/data/default.yaml` | Data paths, features, max particles, preprocessing settings |
+| `configs/data/event_jets_data_loading.yaml` | Data paths, features, max particles, preprocessing settings of the jet-level view |
+| `configs/data/event_particles_data_loading.yaml` | Data paths, features, max particles, preprocessing settings of the particle-level view |
+| `configs/data/event_jet_constituents_loading.yaml` | Data paths, features, max particles, preprocessing settings of the jet-constituents-level view |
 | `configs/trainer/default.yaml` | Training hyperparameters (epochs, batch size, learning rate, seed) |
 
 ### Source Code (`src/`)
@@ -36,7 +41,9 @@ The configuration system uses Hydra's compositional config pattern:
 
 | File | Description |
 |------|-------------|
-| `src/data/data_loading.py` | `L1TriggerDataset` (IterableDataset for streaming parquet files) and `L1TriggerDataModule` (LightningDataModule for train/val/test splits) |
+| `src/data/event_jets_data_loading.py` | `L1TriggerDataset` (IterableDataset for streaming parquet files) and `L1TriggerDataModule` (LightningDataModule for train/val/test splits) |
+| `src/data/event_particles_data_loading.py` | `L1TriggerDataset` (IterableDataset for streaming parquet files) and `L1TriggerDataModule` (LightningDataModule for train/val/test splits) |
+| `src/data/jet_constituents_data_loading.py` | `L1TriggerDataset` (IterableDataset for streaming parquet files) and `L1TriggerDataModule` (LightningDataModule for train/val/test splits) |
 
 #### Models (`src/models/`)
 
