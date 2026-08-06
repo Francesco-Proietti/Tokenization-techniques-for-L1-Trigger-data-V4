@@ -19,7 +19,7 @@ features:
   - L1T_JetPuppiAK4_Phi
 
 # Select the maximum number of jets per event
-max_jets: 16
+max_jets: 14
 
 # Set the preprocessing (True/False)
 preprocessing: True

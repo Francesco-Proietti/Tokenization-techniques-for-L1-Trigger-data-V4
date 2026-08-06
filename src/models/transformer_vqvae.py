@@ -338,5 +338,20 @@ class TransformerVQVAE(pl.LightningModule):
     # Optimizer
     def configure_optimizers(self):
         
-        # Adam
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-4)
+
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode="min",
+            factor=0.1,
+            patience=1
+        )
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val_loss",
+                "interval": "epoch"
+            },
+        } 

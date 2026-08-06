@@ -1,13 +1,13 @@
 # Default trainer config
 
 # Number of epochs
-max_epochs: 30
+max_epochs: 5
 
 # Batch size
-batch_size: 32
+batch_size: 64
 
 # Learning rate
-lr: 1e-4
+lr: 1e-3
 
 # Accelerator
 accelerator: auto

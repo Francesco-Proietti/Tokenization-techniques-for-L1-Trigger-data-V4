@@ -16,17 +16,6 @@ import random
 
 from pathlib import Path
 
-# Label mapping for classification
-LABEL_MAP = {
-    "minbias": 0,
-    "ggHbb": 1
-}
-
-# Function to extract label from file path (name of the folder)
-def extract_label(file_path):
-    process = Path(file_path).parent.name
-    return LABEL_MAP[process]
-
 
 class JetConstL1TriggerDataset(IterableDataset):
     """
@@ -59,6 +48,8 @@ class JetConstL1TriggerDataset(IterableDataset):
         self.dataset = ds.dataset(parquet_dirs, format="parquet")
         self.max_particles = max_particles
         self.features = features
+        self.feat_lab = list(features)
+        self.feat_lab.append("L1T_JetPuppiAK4_Flavor")
         self.kin_coord_num = 3
         self.preprocessing = preprocessing
         self.shuffling = shuffling
@@ -85,6 +76,8 @@ class JetConstL1TriggerDataset(IterableDataset):
         jet_eta = np.array(row["L1T_JetPuppiAK4_Eta"])
         jet_phi = np.array(row["L1T_JetPuppiAK4_Phi"])
         jet_mass = np.array(row["L1T_JetPuppiAK4_Mass"])
+
+        lab = np.array(row["L1T_JetPuppiAK4_Flavor"])
         
         # For loop among jets of the same event
         for i, j in enumerate(const_idx):
@@ -96,6 +89,9 @@ class JetConstL1TriggerDataset(IterableDataset):
                 jet_phi[i],
                 jet_mass[i],
             ])
+
+            # Labels (Flavor)
+            lab_j = lab[i]
 
             # Apply constituents' mask
             j_const_pt = const_pt[j]
@@ -125,12 +121,21 @@ class JetConstL1TriggerDataset(IterableDataset):
             feats[:n_particles, 2] = j_const_phi[:n_particles]
 
             mask[:n_particles] = True
-            
-            yield (
-                torch.FloatTensor(feats),
-                torch.BoolTensor(mask),
-                jet_features,
-            )
+
+            if self.labels:
+                
+                yield (
+                    torch.FloatTensor(feats),
+                    torch.BoolTensor(mask),
+                    jet_features,
+                    lab_j
+                    )
+            else:
+                yield (
+                    torch.FloatTensor(feats),
+                    torch.BoolTensor(mask),
+                    jet_features,
+                )
 
     def __iter__(self) -> Iterator[Tuple]:
         """
@@ -153,13 +158,11 @@ class JetConstL1TriggerDataset(IterableDataset):
         buffer_size = 5000
         
         for file_path in assigned_files:
-
-            label = extract_label(file_path)
             
             dataset = ds.dataset(file_path, format="parquet")
 
             scanner = dataset.scanner(
-                columns=self.features,
+                columns=self.feat_lab,
                 use_threads=True,
             )
             
@@ -176,28 +179,20 @@ class JetConstL1TriggerDataset(IterableDataset):
 
                     if self.shuffling:
 
-                        buffer.append((event, label))
+                        buffer.append(event)
 
                         if len(buffer) >= buffer_size:
 
                             idx = random.randint(0, len(buffer)-1)
                             
-                            event, label = buffer.pop(idx)
+                            event = buffer.pop(idx)
                             
-                            if self.labels:
-
-                                for data in self._process_event(event):
-                                    yield data, label
-                            else:
-                                for data in self._process_event(event):
-                                    yield data
-                    else:
-                        if self.labels:
-                            for data in self._process_event(event):
-                                yield data, label
-                        else:
                             for data in self._process_event(event):
                                 yield data
+                            
+                    else:
+                        for data in self._process_event(event):
+                            yield data            
                         
 
         if self.shuffling:        
@@ -205,14 +200,10 @@ class JetConstL1TriggerDataset(IterableDataset):
             while buffer:
 
                 idx = random.randint(0, len(buffer)-1)
-                event, label = buffer.pop(idx)
+                event = buffer.pop(idx)
 
-                if self.labels:
-                    for data in self._process_event(event):
-                        yield data, label
-                else:
-                    for data in self._process_event(buffer.pop(idx)):
-                        yield data                 
+                for data in self._process_event(event):
+                    yield data            
 
 
 class JetConstL1TriggerDataModule(pl.LightningDataModule):
