@@ -289,22 +289,22 @@ class MLPVQVAE(pl.LightningModule):
         self.log("test_commit_loss", commit_loss, prog_bar=True)
 
     # Optimizer
-        def configure_optimizers(self):
-            
-            optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-4)
-    
-            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer,
-                mode="min",
-                factor=0.1,
-                patience=1
-            )
-    
-            return {
-                "optimizer": optimizer,
-                "lr_scheduler": {
-                    "scheduler": scheduler,
-                    "monitor": "val_loss",
-                    "interval": "epoch"
-                },
-            } 
+    def configure_optimizers(self):
+        
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-4)
+
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode="min",
+            factor=0.1,
+            patience=1
+        )
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val_loss",
+                "interval": "epoch"
+            },
+        } 
