@@ -69,7 +69,7 @@ class TokenDataModule(pl.LightningDataModule):
         num_workers: int = 0,
         test_size: float = 0.10,
         val_size: float = 0.20,
-        seed: int = 42,
+        seed: int = 56,
     ):
         super().__init__()
 
