@@ -195,7 +195,9 @@ class TransformerVQVAE(pl.LightningModule):
             codebook_size=self.codebook_size,
             decay=self.decay,
             commitment_weight=self.beta,
-            rotation_trick=self.rot_trick
+            rotation_trick=self.rot_trick,
+            kmeans_init=True,
+            kmeans_iters=10
         )
         
         self.decoder = Transformer(

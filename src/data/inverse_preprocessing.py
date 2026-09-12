@@ -4,22 +4,25 @@
 import torch
 
 
-def inverse_preprocess(feats, mask, jet_feats=None):
+def inverse_preprocess(feats, mask, ev_j=False, jet_feats=None):
     """Inverse: converts normalized features back to physical units (pt, eta, phi)"""
     feats = feats.clone()
 
     # Inverse pT: exp(x + 1.8)
-    feats[:,:,0] = torch.exp(feats[:,:,0] + 1.8) - 1e-8
-    # Inverse eta: x * 3
-    feats[:,:,1] = feats[:,:,1] * 3.0
+    if ev_j:
+        feats[:,:,0] = torch.exp(feats[:,:,0] + 3.8) - 1e-8
+    else:
+        feats[:,:,0] = torch.exp(feats[:,:,0] + 1.8) - 1e-8
 
     # Inverse phi: depende se jet_feats è None (sin/cos) o no (scaled)
     if jet_feats is None:
+        feats[:,:,1] = feats[:,:,1] * 3.0
         phi = torch.atan2(feats[:,:,2], feats[:,:,3])
         feats[:,:,2] = phi
         feats = feats[:,:,:3]  # Remove cos(phi) channel
     else:
-        feats[:,:,2] = feats[:,:,2] * 3.0
+        feats[:,:,1] = feats[:,:,1] / 4
+        feats[:,:,2] = feats[:,:,2] / 4
         # Add back jet relative offsets here if needed
         jet_eta = jet_feats[:, 1]
         jet_phi = jet_feats[:, 2]

@@ -1,9 +1,10 @@
 """
-Data-loading Implementation
+Jet-level features for each event data-loading implementation
 
 It consists of an IterableDataset and a Lightning DataModule
 """
 
+# Import libraries
 from typing import Iterator, List, Optional, Tuple
 
 import numpy as np
@@ -33,7 +34,7 @@ class EventJetsL1TriggerDataset(IterableDataset):
     IterableDataset for L1-trigger data from parquet files.
 
     Streams data lazily from parquet files instead of loading all into memory.
-    Each event contains PUPPI particles with features: pT, eta, phi.
+    Each event contains jets with features: pT, eta, phi.
     """
 
     def __init__(
@@ -53,6 +54,8 @@ class EventJetsL1TriggerDataset(IterableDataset):
             max_jets: Maximum number of jets per event.
             features: List of feature to extract.
             preprocessing: Whether to apply preprocessing.
+            shuffling: Whether to shuffle the data.
+            labels: Whether to return labels for classification.
         """
         super().__init__()
 
@@ -68,7 +71,7 @@ class EventJetsL1TriggerDataset(IterableDataset):
         Process a single event row into padded features and mask.
 
         Returns:
-            features: [max_jets, n_feats] tensor
+            features: [max_jets, 4 (pT, eta, cos(phi), sin(phi))] tensor
             mask: [max_jets] boolean tensor
         """
         n_feats = len(self.features)
@@ -91,7 +94,7 @@ class EventJetsL1TriggerDataset(IterableDataset):
         # Preprocessing 
         if self.preprocessing:
             
-            pt = np.log(pt + 1e-8) - 1.8  
+            pt = np.log(pt + 1e-8) - 3.8  
             eta = eta / 3
             phi_sin = np.sin(phi)
             phi_cos = np.cos(phi)   

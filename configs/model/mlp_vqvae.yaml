@@ -4,7 +4,7 @@
 name: mlp
 
 # Input dimension (if jet-constituents-level 3, else 4)
-input_dim: 3
+input_dim: 4
 
 # Hidden dimensions (one for each hidden layer)
 hidden_dims: 
@@ -16,7 +16,7 @@ hidden_dims:
 latent_dim: 8
 
 # Codebook size (how many codebook vectors)
-codebook_size: 256
+codebook_size: 2048
 
 # Set the rotation trick (True/False) 
 # (If False the model uses STE)
@@ -35,4 +35,4 @@ encoder_hidden_dims:
 decoder_hidden_dims: 
 
 # True if you are working with jet-constituents-level data-loading, else False
-jet_features: True
+jet_features: False

@@ -1,7 +1,7 @@
 # Default trainer config
 
 # Number of epochs
-max_epochs: 5
+max_epochs: 10
 
 # Batch size
 batch_size: 64
@@ -19,4 +19,4 @@ devices: auto
 log_every_n_steps: 10
 
 # Seed for reproducibility
-seed: 42
+seed: 56

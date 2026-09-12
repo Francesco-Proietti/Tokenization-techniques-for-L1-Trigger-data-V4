@@ -81,8 +81,8 @@ class HistogramPlotter(pl.Callback):
             idx = idx[:n]
             jet_feats = jet_feats[:n] if self.data_loading == "jet_const" else None
         
-        original_post = inverse_preprocess(original, mask, jet_feats if self.data_loading == "jet_const" else None)
-        reconstruction_post = inverse_preprocess(reconstruction, mask, jet_feats if self.data_loading == "jet_const" else None)
+        original_post = inverse_preprocess(original, mask, True if self.data_loading == "event_jets" else False, jet_feats if self.data_loading == "jet_const" else None)
+        reconstruction_post = inverse_preprocess(reconstruction, mask, True if self.data_loading == "event_jets" else False, jet_feats if self.data_loading == "jet_const" else None)
         
         # Apply mask and flatten
         mask3d = mask.unsqueeze(-1)
@@ -93,8 +93,8 @@ class HistogramPlotter(pl.Callback):
         idx = idx[mask].cpu()
 
         # Create plots
-        fig_pre = self._create_histograms(orig_flat, recon_flat, trainer.current_epoch)
-        fig_post = self._create_histograms(orig_post_flat, recon_post_flat, trainer.current_epoch)
+        fig_pre = self._create_histograms(orig_flat, recon_flat, trainer.current_epoch, post=False)
+        fig_post = self._create_histograms(orig_post_flat, recon_post_flat, trainer.current_epoch, post=True)
         fig_cb = self._create_cb_usage(idx, trainer.current_epoch)
 
         # Log to TensorBoard
@@ -136,7 +136,7 @@ class HistogramPlotter(pl.Callback):
         self.jet_feats.clear()
         self.idx.clear()
 
-    def _create_histograms(self, original, reconstruction, epoch):
+    def _create_histograms(self, original, reconstruction, epoch, post):
         """Create histogram comparison plots."""
         n_features = original.shape[-1]
 
@@ -167,11 +167,11 @@ class HistogramPlotter(pl.Callback):
             bins = np.histogram_bin_edges(all_data, bins=50)
 
             # Original vs reconstructed preprocessed (top row)
-            ax_pre.hist(orig_feat.numpy(), bins=bins, density=True,
+            ax_pre.hist(orig_feat.numpy(), bins=bins, density=True, log=True if (post and i == 0) or (not post and i in (1,2) and self.data_loading == "jet_const") else False,
                         color=color[i], label='Original', alpha=0.7)
-            ax_pre.hist(reco_feat.numpy(), bins=bins, density=True,
+            ax_pre.hist(reco_feat.numpy(), bins=bins, density=True, log=True if (post and i == 0) or (not post and i in (1,2) and self.data_loading == "jet_const") else False,
                         color='purple', label='Reconstructed', alpha=0.9, histtype='step')
-            ax_pre.set_title(f'{feat_name}')
+            #ax_pre.set_title(f'{feat_name}')
             ax_pre.set_xlabel(feat_name)
             ax_pre.set_ylabel('Density')
             ax_pre.legend()

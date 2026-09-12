@@ -1,9 +1,10 @@
 """
-Data-loading Implementation
+Jet constituents-level data-loading implementation
 
 It consists of an IterableDataset and a Lightning DataModule
 """
 
+# Import libraries
 from typing import Iterator, List, Optional, Tuple
 
 import numpy as np
@@ -22,17 +23,16 @@ class JetConstL1TriggerDataset(IterableDataset):
     IterableDataset for L1-trigger data from parquet files.
 
     Streams data lazily from parquet files instead of loading all into memory.
-    Each event contains PUPPI particles and jets.
+    Each event contains Jets and each jet contains constituents with features: pT, eta, phi.
     """
 
     def __init__(
         self,
         parquet_dirs: List[str],
         max_particles: int = 128,
-        features: List[str] = ["L1T_PUPPIPart_PT", "L1T_PUPPIPart_Eta", "L1T_PUPPIPart_Phi", "L1T_PUPPIPart_PuppiW"],
+        features: List[str] = ["L1T_PUPPIPart_PT", "L1T_PUPPIPart_Eta", "L1T_PUPPIPart_Phi", "L1T_PUPPIPart_PuppiW", "L1T_JetPuppiAK4_PT", "L1T_JetPuppiAK4_Eta", "L1T_JetPuppiAK4_Phi", "L1T_JetPuppiAK4_Mass", "L1T_JetPuppiAK4_ConstituentsIdx"],
         preprocessing: bool = True,
-        shuffling: bool = False,
-        labels: bool = False
+        shuffling: bool = False
     ):
         """
         Initialize the dataset.
@@ -42,18 +42,16 @@ class JetConstL1TriggerDataset(IterableDataset):
             max_particles: Maximum number of particles per jet.
             features: List of feature to extract.
             preprocessing: Whether to apply preprocessing.
+            shuffling: Whether to shuffle the data.
         """
         super().__init__()
 
         self.dataset = ds.dataset(parquet_dirs, format="parquet")
         self.max_particles = max_particles
         self.features = features
-        self.feat_lab = list(features)
-        self.feat_lab.append("L1T_JetPuppiAK4_Flavor")
         self.kin_coord_num = 3
         self.preprocessing = preprocessing
         self.shuffling = shuffling
-        self.labels = labels
 
     def _process_event(self, row: pd.Series) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -77,7 +75,6 @@ class JetConstL1TriggerDataset(IterableDataset):
         jet_phi = np.array(row["L1T_JetPuppiAK4_Phi"])
         jet_mass = np.array(row["L1T_JetPuppiAK4_Mass"])
 
-        lab = np.array(row["L1T_JetPuppiAK4_Flavor"])
         
         # For loop among jets of the same event
         for i, j in enumerate(const_idx):
@@ -89,9 +86,6 @@ class JetConstL1TriggerDataset(IterableDataset):
                 jet_phi[i],
                 jet_mass[i],
             ])
-
-            # Labels (Flavor)
-            lab_j = lab[i]
 
             # Apply constituents' mask
             j_const_pt = const_pt[j]
@@ -108,8 +102,8 @@ class JetConstL1TriggerDataset(IterableDataset):
                 
                 # Scaling
                 j_const_pt = np.log(j_const_pt + 1e-8) - 1.8
-                j_const_eta = j_const_eta / 3
-                j_const_phi = j_const_phi / 3
+                j_const_eta = j_const_eta * 4
+                j_const_phi = j_const_phi * 4
 
             n_particles = min(len(j_const_pt), self.max_particles)
 
@@ -122,20 +116,11 @@ class JetConstL1TriggerDataset(IterableDataset):
 
             mask[:n_particles] = True
 
-            if self.labels:
-                
-                yield (
-                    torch.FloatTensor(feats),
-                    torch.BoolTensor(mask),
-                    jet_features,
-                    lab_j
-                    )
-            else:
-                yield (
-                    torch.FloatTensor(feats),
-                    torch.BoolTensor(mask),
-                    jet_features,
-                )
+            yield (
+                torch.FloatTensor(feats),
+                torch.BoolTensor(mask),
+                jet_features,
+            )
 
     def __iter__(self) -> Iterator[Tuple]:
         """
@@ -162,7 +147,7 @@ class JetConstL1TriggerDataset(IterableDataset):
             dataset = ds.dataset(file_path, format="parquet")
 
             scanner = dataset.scanner(
-                columns=self.feat_lab,
+                columns=self.features,
                 use_threads=True,
             )
             

@@ -1,9 +1,10 @@
 """
-Data-loading Implementation
+Particle-level features for each event data-loading implementation
 
 It consists of an IterableDataset and a Lightning DataModule
 """
 
+# Import libraries
 from typing import Iterator, List, Optional, Tuple
 
 import numpy as np
@@ -16,18 +17,6 @@ import random
 from collections import deque
 
 from pathlib import Path
-
-
-# Label mapping for classification
-LABEL_MAP = {
-    "minbias": 0,
-    "ggHbb": 1
-}
-
-# Function to extract label from file path (name of the folder)
-def extract_label(file_path):
-    process = Path(file_path).parent.name
-    return LABEL_MAP[process]
 
 
 class EventPartL1TriggerDataset(IterableDataset):
@@ -45,8 +34,7 @@ class EventPartL1TriggerDataset(IterableDataset):
         features: List[str] = ["L1T_PUPPIPart_PT", "L1T_PUPPIPart_Eta", "L1T_PUPPIPart_Phi", "L1T_PUPPIPart_PuppiW"],
         puppiw_threshold: float = 0.05,
         preprocessing: bool = True,
-        shuffling: bool = False,
-        labels: bool = False
+        shuffling: bool = False
     ):
         """
         Initialize the dataset.
@@ -68,14 +56,13 @@ class EventPartL1TriggerDataset(IterableDataset):
         self.puppiw_threshold = puppiw_threshold
         self.preprocessing = preprocessing
         self.shuffling = shuffling
-        self.labels = labels
 
     def _process_event(self, row: pd.Series) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Process a single event row into padded features and mask.
 
         Returns:
-            features: [max_particles, n_coords] tensor
+            features: [max_particles, 4 (pT, eta, cos(phi), sin(phi))] tensor
             mask: [max_particles] boolean tensor
         """
         n_coords = len(self.coords)
@@ -138,8 +125,6 @@ class EventPartL1TriggerDataset(IterableDataset):
         
         for file_path in assigned_files:
 
-            label = extract_label(file_path)
-
             dataset = ds.dataset(file_path, format="parquet")
 
             scanner = dataset.scanner(
@@ -159,43 +144,32 @@ class EventPartL1TriggerDataset(IterableDataset):
                     valid_mask = np.array(puppiw) >= self.puppiw_threshold
                     pt = np.array(df.iloc[i]["L1T_PUPPIPart_PT"])[valid_mask]
 
-                    #if len(pt) > 0:
-                    #    yield self._process_event(df.iloc[i])
-
                     if len(pt) == 0:
                         continue
                     
                     if self.shuffling:
 
-                        buffer.append((event, label)) 
+                        buffer.append(event) 
                     
                         if len(buffer) >= buffer_size:
 
                             idx = random.randint(0, len(buffer)-1)
 
-                            event, label = buffer.pop(idx)
+                            event = buffer.pop(idx)
 
-                            if self.labels:
-                                yield self._process_event(event), label
-                            else:
-                                yield self._process_event(event)
-                    else:
-                        if self.labels:
-                            yield self._process_event(event), label
-                        else:
                             yield self._process_event(event)
+
+                    else:
+                        yield self._process_event(event)
 
         if self.shuffling:        
             # Remaining events in buffer
             while buffer:
 
                 idx = random.randint(0, len(buffer)-1)
-                event, label = buffer.pop(idx)
+                event = buffer.pop(idx)
 
-                if self.labels:
-                    yield self._process_event(event), label
-                else:
-                    yield self._process_event(event)
+                yield self._process_event(event)
 
 
 class EventPartL1TriggerDataModule(pl.LightningDataModule):
