@@ -72,6 +72,12 @@ python train.py
 # Change data paths in configs/data/default.yaml before running
 ```
 
+```bash
+# Command example for running the tokenizer
+python tokenizer.py --checkpoint checkpoints/transformer-event_jets-True-1024/v0-epoch=09-val_loss=0.0454-transformer-event_jets-True-1024.ckpt --parquet-dir /run/media/francesco/STORAGE/data
+_cern_2/Test --data-type event_jets --output-dir classifier/tokens --model-type transformer --max-particles 14
+```
+
 ## Dependencies
 
 Install via: `conda env create -f environment.yaml`

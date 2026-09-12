@@ -2,7 +2,7 @@
 
 """
 Generate tokens from a trained VQ-VAE model.
-Saves tokens for downstream GPT training.
+Saves tokens for downstream training.
 """
 
 #Import libraries
@@ -161,7 +161,7 @@ def generate_and_save_tokens(
     elif data_type == "event_jets":
         dataset = EventJetsL1TriggerDataset(
             parquet_dirs=parquet_dirs,
-            max_jets=16,
+            max_jets=14,
             features=["L1T_JetPuppiAK4_PT", "L1T_JetPuppiAK4_Eta", "L1T_JetPuppiAK4_Phi"],
             preprocessing=True,
             shuffling=False,
@@ -209,7 +209,7 @@ def generate_and_save_tokens(
         "checkpoint": checkpoint_path,
         "data_type": data_type,
         "codebook_size": codebook_size,
-        "max_particles": max_particles if data_type != "event_jets" else 16,
+        "max_particles": max_particles if data_type != "event_jets" else 14,
         "num_events": all_tokens.shape[0],
         "unique_labels": torch.unique(all_labels).tolist(),
     }

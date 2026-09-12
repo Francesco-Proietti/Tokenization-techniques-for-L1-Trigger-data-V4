@@ -7,8 +7,8 @@ import torch
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 
-from gpt_like.dataset import TokenDataModule
-from gpt_like.model import GPTPretrainModule
+from classifier.dataset import TokenDataModule
+from classifier.classifier_model import EncoderClassificationModule
 
 
 def main():
@@ -18,25 +18,22 @@ def main():
 
     # DataModule
     data_module = TokenDataModule(
-        tokens_path="gpt_like/tokens/tokens.pt",
-        masks_path="gpt_like/tokens/masks.pt",
-        labels_path="gpt_like/tokens/labels.pt",
-        cb_size=512,
+        tokens_path="classifier/tokens/tokens.pt",
+        masks_path="classifier/tokens/masks.pt",
+        labels_path="classifier/tokens/labels.pt",
+        cb_size=1024,
         batch_size=32,
         num_workers=0,
         test_size=0.10,
         val_size=0.20,
-        seed=42,
+        seed=56,
     )
 
     # Model
-    
-
-    model = GPTPretrainModule(
-        vocab_size=514,
-        max_seq_len=129,
-        pad_token=512,
-        bos_token=513,
+    model = EncoderClassificationModule(
+        vocab_size=1025,
+        max_seq_len=14,
+        cls_token=0,
         d_model=256,
         n_layers=4,
         n_heads=8,
@@ -47,12 +44,12 @@ def main():
 
     # Logger
     logger = TensorBoardLogger(
-        save_dir="logs_GPT",
-        name="GPT"
+        save_dir="logs_classifier",
+        name="class"
     )
 
-    check_dir = "checkpoints_GPT"
-    exp_name = "GPT"
+    check_dir = "checkpoints_classifier"
+    exp_name = "class"
 
     # Checkpoints
     checkpoint_callback = ModelCheckpoint(
