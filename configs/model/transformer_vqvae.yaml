@@ -22,7 +22,7 @@ depth: 4
 latent_dim: 8
 
 # Codebook size (how many codebook vectors)
-codebook_size: 2048
+codebook_size: 1024
 
 # Set the rotation trick (True/False)
 # (If False the model uses STE)

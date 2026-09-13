@@ -201,3 +201,461 @@ class HistogramPlotter(pl.Callback):
         fig.tight_layout()
 
         return fig
+    
+
+
+# HistogramTestPlotter
+class HistogramTestPlotter(pl.Callback):
+    """
+    Callback to plot and log histograms of reconstructed vs original
+    features at the end of the test epoch.
+    """
+
+    def __init__(
+        self,
+        data_loading: str,
+        cb_size: int,
+        model_name: str,
+        rotation: str,
+        output_dir: str = "test_plots",
+        max_samples=None,
+    ):
+        """
+        Args:
+            data_loading: String indicating the type of data loading used
+            cb_size: Codebook size
+            model_name: Name of the model
+            rotation: String indicating if the rotation trick is used
+            output_dir: Directory where plots are saved
+            max_samples: Maximum number of samples to use for plotting
+        """
+
+        self.data_loading = data_loading
+        self.model_name = model_name
+        self.rotation = rotation
+        self.output_dir = output_dir
+        self.max_samples = max_samples
+        self.cb_size = cb_size
+
+        self.originals = []
+        self.reconstructions = []
+        self.masks = []
+        self.jet_feats = []
+        self.idx = []
+
+    # ---------------------------------------------------------
+    # TEST
+    # ---------------------------------------------------------
+
+    def on_test_batch_end(
+        self,
+        trainer,
+        pl_module,
+        outputs,
+        batch,
+        batch_idx
+    ):
+        """
+        Collect original and reconstructed features
+        from each test batch.
+        """
+
+        if self.data_loading == "jet_const":
+            x, mask, j = batch
+            self.jet_feats.append(j.detach().clone())
+        else:
+            x, mask = batch
+
+        # Expected:
+        # outputs = (reconstruction, quantization_indices)
+        reconstruction, idx = outputs
+
+        self.originals.append(
+            x.detach().clone()
+        )
+
+        self.masks.append(
+            mask.detach().clone()
+        )
+
+        self.reconstructions.append(
+            reconstruction.detach().clone()
+        )
+
+        self.idx.append(
+            idx.detach().clone()
+        )
+
+    def on_test_epoch_end(self, trainer, pl_module):
+        """
+        Create histograms at the end of the test epoch.
+        """
+
+        # -----------------------------------------------------
+        # Concatenate all batches
+        # -----------------------------------------------------
+
+        original = torch.cat(
+            self.originals,
+            dim=0
+        )
+
+        reconstruction = torch.cat(
+            self.reconstructions,
+            dim=0
+        )
+
+        mask = torch.cat(
+            self.masks,
+            dim=0
+        )
+
+        idx = torch.cat(
+            self.idx,
+            dim=0
+        )
+
+        if self.data_loading == "jet_const":
+            jet_feats = torch.cat(
+                self.jet_feats,
+                dim=0
+            )
+        else:
+            jet_feats = None
+
+        # -----------------------------------------------------
+        # Limit number of samples
+        # -----------------------------------------------------
+
+        if self.max_samples is not None:
+
+            n = min(
+                len(original),
+                self.max_samples
+            )
+
+            original = original[:n]
+            reconstruction = reconstruction[:n]
+            mask = mask[:n]
+            idx = idx[:n]
+
+            if jet_feats is not None:
+                jet_feats = jet_feats[:n]
+
+        # -----------------------------------------------------
+        # Inverse preprocessing
+        # -----------------------------------------------------
+
+        original_post = inverse_preprocess(
+            original,
+            mask,
+            True if self.data_loading == "event_jets" else False,
+            jet_feats if self.data_loading == "jet_const" else None
+        )
+
+        reconstruction_post = inverse_preprocess(
+            reconstruction,
+            mask,
+            True if self.data_loading == "event_jets" else False,
+            jet_feats if self.data_loading == "jet_const" else None
+        )
+
+        # -----------------------------------------------------
+        # Apply mask and flatten
+        # -----------------------------------------------------
+
+        orig_flat = original[mask].cpu()
+        orig_post_flat = original_post[mask].cpu()
+
+        recon_flat = reconstruction[mask].cpu()
+        recon_post_flat = reconstruction_post[mask].cpu()
+
+        idx_flat = idx[mask].cpu()
+
+        # -----------------------------------------------------
+        # Create plots
+        # -----------------------------------------------------
+
+        fig_pre = self._create_histograms(
+            orig_flat,
+            recon_flat,
+            post=False
+        )
+
+        fig_post = self._create_histograms(
+            orig_post_flat,
+            recon_post_flat,
+            post=True
+        )
+
+        fig_cb = self._create_cb_usage(
+            idx_flat
+        )
+
+        # -----------------------------------------------------
+        # Log to TensorBoard
+        # -----------------------------------------------------
+
+        if hasattr(pl_module, "logger") and pl_module.logger:
+
+            pl_module.logger.experiment.add_figure(
+                "test/histograms_pre",
+                fig_pre,
+                trainer.global_step
+            )
+
+            pl_module.logger.experiment.add_figure(
+                "test/histograms_post",
+                fig_post,
+                trainer.global_step
+            )
+
+            pl_module.logger.experiment.add_figure(
+                "test/cb_plot",
+                fig_cb,
+                trainer.global_step
+            )
+
+        # -----------------------------------------------------
+        # Save plots to disk
+        # -----------------------------------------------------
+
+        os.makedirs(
+            self.output_dir,
+            exist_ok=True
+        )
+
+        filepath = os.path.join(
+            self.output_dir,
+            "test_pre.png"
+        )
+
+        fig_pre.savefig(
+            filepath,
+            dpi=150,
+            bbox_inches="tight"
+        )
+
+        plt.close(fig_pre)
+
+        filepath = os.path.join(
+            self.output_dir,
+            "test_post.png"
+        )
+
+        fig_post.savefig(
+            filepath,
+            dpi=150,
+            bbox_inches="tight"
+        )
+
+        plt.close(fig_post)
+
+        filepath = os.path.join(
+            self.output_dir,
+            "test_cb.png"
+        )
+
+        fig_cb.savefig(
+            filepath,
+            dpi=150,
+            bbox_inches="tight"
+        )
+
+        plt.close(fig_cb)
+
+        # -----------------------------------------------------
+        # Clear stored data
+        # -----------------------------------------------------
+
+        self.originals.clear()
+        self.reconstructions.clear()
+        self.masks.clear()
+        self.jet_feats.clear()
+        self.idx.clear()
+
+    # ---------------------------------------------------------
+    # HISTOGRAMS
+    # ---------------------------------------------------------
+
+    def _create_histograms(
+        self,
+        original,
+        reconstruction,
+        post
+    ):
+        """Create histogram comparison plots."""
+
+        n_features = original.shape[-1]
+
+        if (
+            n_features == 4
+            and self.data_loading in (
+                "event_jets",
+                "event_part"
+            )
+        ):
+            feature_names = [
+                r"$P_t$",
+                r"$\eta$",
+                r"$\cos(\phi)$",
+                r"$\sin(\phi)$"
+            ]
+
+            color = [
+                "orange",
+                "red",
+                "blue",
+                "blue"
+            ]
+
+        else:
+            feature_names = [
+                r"$P_t$",
+                r"$\eta$",
+                r"$\phi$"
+            ]
+
+            color = [
+                "orange",
+                "red",
+                "blue"
+            ]
+
+        # -----------------------------------------------------
+        # Create figure
+        # -----------------------------------------------------
+
+        fig, axes = plt.subplots(
+            1,
+            n_features,
+            figsize=(5 * n_features, 6)
+        )
+
+        if n_features == 1:
+            axes = [axes]
+
+        # -----------------------------------------------------
+        # Plot each feature
+        # -----------------------------------------------------
+
+        for i, (feat_name, ax) in enumerate(
+            zip(feature_names, axes)
+        ):
+
+            orig_feat = original[:, i]
+            reco_feat = reconstruction[:, i]
+
+            all_data = torch.cat(
+                [orig_feat, reco_feat]
+            ).numpy()
+
+            if len(all_data) == 0:
+                continue
+
+            bins = np.histogram_bin_edges(
+                all_data,
+                bins=50
+            )
+
+            log_scale = (
+                (post and i == 0)
+                or (
+                    not post
+                    and i in (1, 2)
+                    and self.data_loading == "jet_const"
+                )
+            )
+
+            ax.hist(
+                orig_feat.numpy(),
+                bins=bins,
+                density=True,
+                log=log_scale,
+                color=color[i],
+                label="Original",
+                alpha=0.7
+            )
+
+            ax.hist(
+                reco_feat.numpy(),
+                bins=bins,
+                density=True,
+                log=log_scale,
+                color="purple",
+                label="Reconstructed",
+                alpha=0.9,
+                histtype="step"
+            )
+
+            ax.set_xlabel(feat_name)
+            ax.set_ylabel("Density")
+            ax.legend()
+
+        # -----------------------------------------------------
+        # Title
+        # -----------------------------------------------------
+
+        stage = "postprocessed" if post else "preprocessed"
+
+        fig.suptitle(
+            f"Test - {stage} - "
+            f"{self.model_name}-VQVAE-"
+            f"rot:{self.rotation}-"
+            f"cb:{self.cb_size}"
+        )
+
+        fig.tight_layout()
+
+        return fig
+
+    # ---------------------------------------------------------
+    # CODEBOOK USAGE
+    # ---------------------------------------------------------
+
+    def _create_cb_usage(self, idx):
+        """Create codebook usage plot."""
+
+        cb_usage = (
+            len(torch.unique(idx))
+            / int(self.cb_size)
+        )
+
+        fig, ax = plt.subplots(
+            figsize=(8, 5)
+        )
+
+        bins = (
+            np.arange(self.cb_size + 1)
+            - 0.5
+        )
+
+        ax.hist(
+            idx.numpy(),
+            density=True,
+            bins=bins,
+            color="brown",
+            alpha=0.8
+        )
+
+        ax.set_xlim(
+            -0.5,
+            self.cb_size - 0.5
+        )
+
+        ax.set_xlabel(
+            f"Quantization index "
+            f"(CB-usage={cb_usage:.4f})"
+        )
+
+        ax.set_ylabel("Density")
+
+        fig.suptitle(
+            f"Test - {self.model_name}-VQVAE-"
+            f"rot:{self.rotation}-"
+            f"cb:{self.cb_size}"
+        )
+
+        fig.tight_layout()
+
+        return fig

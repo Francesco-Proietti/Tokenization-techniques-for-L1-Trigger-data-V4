@@ -237,3 +237,6 @@ classifier/tokens
 
 # Hydra output
 outputs/
+
+# Test logs
+logstest/

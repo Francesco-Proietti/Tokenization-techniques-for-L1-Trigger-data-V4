@@ -2,9 +2,9 @@
 
 defaults:
   # Select the model
-  - model: mlp_vqvae
+  - model: transformer_vqvae
   # Use the data default config
-  - data: event_particles_data_loading
+  - data: event_jets_data_loading
   # Use the trainer default config
   - trainer: default
 
