@@ -226,14 +226,32 @@ checkpoints/
 # TensorBoard logs
 logs/
 
-# PyTorch Lightning GPT classifier checkpoints
+# PyTorch Lightning classifier checkpoints
 checkpoints_classifier/
 
-# TensorBoard GPT classifier logs
+# TensorBoard classifier logs
 logs_classifier/
 
 # Tokens 
 classifier/tokens
+
+# PyTorch Lightning baseline classifier checkpoints
+checkpoints_base_classifier/
+
+# TensorBoard baseline classifier logs
+logs_base_classifier/
+
+# Baseline dataset for classification 
+classifier_baseline/data
+
+# PyTorch Lightning recon classifier checkpoints
+checkpoints_reco_classifier/
+
+# TensorBoard recon classifier logs
+logs_reco_classifier/
+
+# Recon dataset for classification 
+classifier_recon/data_reco
 
 # Hydra output
 outputs/

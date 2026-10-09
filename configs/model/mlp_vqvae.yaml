@@ -20,7 +20,7 @@ codebook_size: 2048
 
 # Set the rotation trick (True/False) 
 # (If False the model uses STE)
-rotation_trick: False
+rotation_trick: True
 
 # Decay (VQ layer)
 decay: 0.8

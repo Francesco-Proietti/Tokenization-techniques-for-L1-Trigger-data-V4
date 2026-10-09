@@ -4,7 +4,9 @@ MLP VQ-VAE Implementation
 A simple Vector Quantized Variational Autoencoder with MLP encoder/decoder.
 """
 
+from curses import error
 from typing import List, Optional, Tuple
+from xml.parsers.expat import errors
 
 import torch
 import torch.nn as nn
@@ -259,6 +261,9 @@ class MLPVQVAE(pl.LightningModule):
         self.log("val_commit_loss", commit_loss, prog_bar=True)
         
         return x_recon, idx
+    
+    def on_test_epoch_start(self):
+        self.test_recon_errors = []
 
     # Test step
     def test_step(self, batch, batch_idx):
@@ -274,8 +279,19 @@ class MLPVQVAE(pl.LightningModule):
         recon_loss = (x - x_recon) ** 2
 
         # Apply mask
+        mask_o = mask.clone()
         mask = mask.unsqueeze(-1)
         recon_loss = recon_loss * mask
+
+        # Somma delle 4 feature per ogni token
+        token_error = recon_loss.sum(dim=-1)
+
+        # Solo token validi
+        valid_token_errors = token_error[mask_o.bool()]
+
+        self.test_recon_errors.append(
+            valid_token_errors.detach()
+        )
 
         # Average only valid values
         recon_loss = recon_loss.sum() / mask.sum()
@@ -287,8 +303,24 @@ class MLPVQVAE(pl.LightningModule):
         self.log("test_loss", loss, on_epoch=True, prog_bar=True)
         self.log("test_recon_loss", recon_loss, on_epoch=True, prog_bar=True)
         self.log("test_commit_loss", commit_loss, on_epoch=True, prog_bar=True)
-
+     
         return x_recon, idx
+
+    def on_test_epoch_end(self):
+
+        errors = torch.cat(self.test_recon_errors)
+
+        mean = errors.mean()
+        std = errors.std(unbiased=False)
+        N = errors.numel()
+
+        sem = std / torch.sqrt(
+            torch.tensor(N, device=errors.device)
+        )
+
+        self.log("test_recon_loss_mean", mean)
+        self.log("test_recon_loss_std", std)
+        self.log("test_recon_loss_sem", sem, prog_bar=True)
     
     # Optimizer
     def configure_optimizers(self):

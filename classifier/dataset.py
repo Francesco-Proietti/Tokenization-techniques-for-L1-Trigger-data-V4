@@ -67,8 +67,7 @@ class TokenDataModule(pl.LightningDataModule):
         cb_size: int = 512,
         batch_size: int = 32,
         num_workers: int = 0,
-        test_size: float = 0.10,
-        val_size: float = 0.20,
+        test_size: float = 0.20,
         seed: int = 56,
     ):
         super().__init__()
@@ -83,7 +82,6 @@ class TokenDataModule(pl.LightningDataModule):
         self.num_workers = num_workers
 
         self.test_size = test_size
-        self.val_size = val_size
 
         self.seed = seed
 
@@ -104,7 +102,7 @@ class TokenDataModule(pl.LightningDataModule):
         # train + val / test
         # -------------------------
 
-        train_val_idx, test_idx = train_test_split(
+        train_idx, test_idx = train_test_split(
             indices,
             test_size=self.test_size,
             stratify=labels,
@@ -112,24 +110,7 @@ class TokenDataModule(pl.LightningDataModule):
             shuffle=True,
         )
 
-        # -------------------------
-        # train / val
-        # -------------------------
-
-        train_val_labels = labels[train_val_idx]
-
-        val_fraction = self.val_size / (1.0 - self.test_size)
-
-        train_idx, val_idx = train_test_split(
-            train_val_idx,
-            test_size=val_fraction,
-            stratify=train_val_labels,
-            random_state=self.seed,
-            shuffle=True,
-        )
-
         self.train_dataset = Subset(dataset, train_idx)
-        self.val_dataset = Subset(dataset, val_idx)
         self.test_dataset = Subset(dataset, test_idx)
 
 
@@ -139,16 +120,6 @@ class TokenDataModule(pl.LightningDataModule):
             self.train_dataset,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=self.num_workers,
-            pin_memory=True,
-        )
-
-    def val_dataloader(self):
-
-        return DataLoader(
-            self.val_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
             num_workers=self.num_workers,
             pin_memory=True,
         )

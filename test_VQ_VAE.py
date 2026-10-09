@@ -22,7 +22,7 @@ from src.callbacks.histogram_plotter import HistogramPlotter, HistogramTestPlott
 def main(cfg: DictConfig):
 
     # Set seed for reproducibility
-    pl.seed_everything(cfg.trainer.seed, workers=True)
+    #pl.seed_everything(cfg.trainer.seed, workers=True)
 
     # ---------------------------------------------------------
     # DataModule
@@ -39,12 +39,12 @@ def main(cfg: DictConfig):
     # Model
     # ---------------------------------------------------------
 
-    #checkpoint_path = "checkpoints/mlp-event_jets-True-1024/v0-epoch=09-val_loss=0.0454-transformer-event_jets-True-1024.ckpt"
-    #checkpoint_path = "checkpoints/mlp-event_part-True-1024/v0-epoch=09-val_loss=0.0454-transformer-event_jets-True-1024.ckpt"
-    #checkpoint_path = "checkpoints/mlp-jet_const-True-1024/v0-epoch=09-val_loss=0.0454-transformer-event_jets-True-1024.ckpt"
-    checkpoint_path = "checkpoints/transformer-event_jets-True-1024/v0-epoch=09-val_loss=0.0454-transformer-event_jets-True-1024.ckpt"
-    #checkpoint_path = "checkpoints/transformer-event_part-True-1024/v0-epoch=09-val_loss=0.0454-transformer-event_jets-True-1024.ckpt"
-    #checkpoint_path = "checkpoints/transformer-jet_const-True-1024/v0-epoch=09-val_loss=0.0454-transformer-event_jets-True-1024.ckpt"
+    #checkpoint_path = "checkpoints/mlp-event_jets-True-2048/v0-epoch=09-val_loss=0.0499-mlp-event_jets-True-2048.ckpt"
+    #checkpoint_path = "checkpoints/mlp-event_part-True-2048/v0-epoch=06-val_loss=0.0300-mlp-event_part-True-2048.ckpt"
+    #checkpoint_path = "checkpoints/mlp-jet_const-True-2048/v0-epoch=04-val_loss=0.0114-mlp-jet_const-True-2048.ckpt"
+    #checkpoint_path = "checkpoints/transformer-event_jets-True-2048/v0-epoch=09-val_loss=0.0441-transformer-event_jets-True-2048.ckpt"
+    #checkpoint_path = "checkpoints/transformer-event_part-True-2048/v0-epoch=09-val_loss=0.0223-transformer-event_part-True-2048.ckpt"
+    checkpoint_path = "checkpoints/transformer-jet_const-True-2048/v0-epoch=06-val_loss=0.0100-transformer-jet_const-True-2048.ckpt"
     
     model_name = cfg.model.name
     ModelClass = MODEL_REGISTRY[model_name]

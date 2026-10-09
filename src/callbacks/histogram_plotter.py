@@ -388,6 +388,18 @@ class HistogramTestPlotter(pl.Callback):
             post=True
         )
 
+        fig_res_pre = self._create_residual_histograms(
+        orig_flat,
+        recon_flat,
+        post=False
+        )
+
+        fig_res_post = self._create_residual_histograms(
+            orig_post_flat,
+            recon_post_flat,
+            post=True
+        )
+
         fig_cb = self._create_cb_usage(
             idx_flat
         )
@@ -407,6 +419,18 @@ class HistogramTestPlotter(pl.Callback):
             pl_module.logger.experiment.add_figure(
                 "test/histograms_post",
                 fig_post,
+                trainer.global_step
+            )
+
+            pl_module.logger.experiment.add_figure(
+                "test/residuals_pre",
+                fig_res_pre,
+                trainer.global_step
+            )
+
+            pl_module.logger.experiment.add_figure(
+                "test/residuals_post",
+                fig_res_post,
                 trainer.global_step
             )
 
@@ -450,6 +474,33 @@ class HistogramTestPlotter(pl.Callback):
         )
 
         plt.close(fig_post)
+
+        filepath = os.path.join(
+            self.output_dir,
+            "test_residuals_pre.png"
+        )
+
+        fig_res_pre.savefig(
+            filepath,
+            dpi=150,
+            bbox_inches="tight"
+        )
+
+        plt.close(fig_res_pre)
+
+
+        filepath = os.path.join(
+            self.output_dir,
+            "test_residuals_post.png"
+        )
+
+        fig_res_post.savefig(
+            filepath,
+            dpi=150,
+            bbox_inches="tight"
+        )
+
+        plt.close(fig_res_post)
 
         filepath = os.path.join(
             self.output_dir,
@@ -608,6 +659,153 @@ class HistogramTestPlotter(pl.Callback):
         fig.tight_layout()
 
         return fig
+
+    
+    def _create_residual_histograms(
+        self,
+        original,
+        reconstruction,
+        post,
+    ):
+        """Create histograms of reconstruction residuals:
+        residual = original - reconstruction.
+        """
+
+        n_features = original.shape[-1]
+
+        if (
+            n_features == 4
+            and self.data_loading in (
+                "event_jets",
+                "event_part",
+            )
+        ):
+            feature_names = [
+                r"$P_t$",
+                r"$\eta$",
+                r"$\cos(\phi)$",
+                r"$\sin(\phi)$"
+            ]
+
+            colors = ["orange","red","blue", "blue"]
+        else:
+            feature_names = [
+                r"$P_t$",
+                r"$\eta$",
+                r"$\phi$"
+            ]
+
+            colors = ["orange","red","blue"]
+
+        # -----------------------------------------------------
+        # Compute residuals
+        # -----------------------------------------------------
+
+        residuals = original - reconstruction
+
+        if post:
+            residuals[:,2] = (residuals[:,2] + torch.pi) % (2 * torch.pi) - torch.pi
+
+        # -----------------------------------------------------
+        # Create figure
+        # -----------------------------------------------------
+
+        fig, axes = plt.subplots(
+            1,
+            n_features,
+            figsize=(5 * n_features, 6)
+        )
+
+        if n_features == 1:
+            axes = [axes]
+
+        # -----------------------------------------------------
+        # Plot each feature
+        # -----------------------------------------------------
+
+        for i, (feat_name, ax) in enumerate(
+            zip(feature_names, axes)
+        ):
+
+            residual_feat = residuals[:, i]
+
+            if len(residual_feat) == 0:
+                continue
+
+            residual_np = residual_feat.numpy()
+
+            # Use symmetric bins around zero
+            max_abs = np.max(np.abs(residual_np))
+
+            if max_abs == 0:
+                max_abs = 1e-8
+
+            bins = np.linspace(
+                -max_abs,
+                max_abs,
+                51
+            )
+
+            log_scale = (post and i == 0)
+
+            ax.hist(
+                residual_np,
+                bins=bins,
+                density=True,
+                log=log_scale,
+                alpha=0.8,
+                color=colors[i],
+            )
+
+            # Zero-error reference
+            ax.axvline(
+                0,
+                color="black",
+                linestyle="--",
+                linewidth=1
+            )
+
+            # Mean and standard deviation
+            mean = np.mean(residual_np)
+            std = np.std(residual_np)
+
+            ax.axvline(
+                mean,
+                color="red",
+                linestyle=":",
+                linewidth=1.5,
+                label=rf"$\mu={mean:.3g}$"
+            )
+
+            ax.set_xlabel(
+                rf"{feat_name} residual"
+                "\n"
+                rf"$x_{{original}} - x_{{reconstructed}}$"
+            )
+            ax.set_ylabel("Density")
+            ax.legend()
+
+            ax.set_title(
+                rf"$\sigma={std:.3g}$"
+            )
+
+        # -----------------------------------------------------
+        # Title
+        # -----------------------------------------------------
+
+        stage = "postprocessed" if post else "preprocessed"
+
+        fig.suptitle(
+            f"Test - residuals ({stage}) - "
+            f"{self.model_name}-VQVAE-"
+            f"rot:{self.rotation}-"
+            f"cb:{self.cb_size}"
+        )
+
+        fig.tight_layout()
+
+        return fig
+
 
     # ---------------------------------------------------------
     # CODEBOOK USAGE

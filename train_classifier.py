@@ -14,7 +14,7 @@ from classifier.classifier_model import EncoderClassificationModule
 def main():
 
     # Set seed for reproducibility
-    pl.seed_everything(56, workers=True)
+    pl.seed_everything(15, workers=True)
 
     # DataModule
     data_module = TokenDataModule(
@@ -22,11 +22,10 @@ def main():
         masks_path="classifier/tokens/masks.pt",
         labels_path="classifier/tokens/labels.pt",
         cb_size=1024,
-        batch_size=32,
+        batch_size=64,
         num_workers=0,
-        test_size=0.10,
-        val_size=0.20,
-        seed=56,
+        test_size=0.20,
+        seed=15,
     )
 
     # Model
@@ -54,9 +53,9 @@ def main():
     # Checkpoints
     checkpoint_callback = ModelCheckpoint(
         dirpath=f"{check_dir}/{exp_name}",
-        filename=f"v{logger.version}" + "-{epoch:02d}-{val_loss:.4f}" + f"-{exp_name}",
-        monitor="val_loss",
-        mode="min",
+        filename=f"v{logger.version}" + "-{epoch:02d}-{train_acc:.4f}" + f"-{exp_name}",
+        monitor="train_acc",
+        mode="max",
         save_top_k=3,
         save_last=True
     )
