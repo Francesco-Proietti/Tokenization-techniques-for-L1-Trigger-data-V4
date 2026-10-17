@@ -39,12 +39,12 @@ def main(cfg: DictConfig):
     # Model
     # ---------------------------------------------------------
 
-    #checkpoint_path = "checkpoints/mlp-event_jets-True-2048/v0-epoch=09-val_loss=0.0499-mlp-event_jets-True-2048.ckpt"
-    #checkpoint_path = "checkpoints/mlp-event_part-True-2048/v0-epoch=06-val_loss=0.0300-mlp-event_part-True-2048.ckpt"
-    #checkpoint_path = "checkpoints/mlp-jet_const-True-2048/v0-epoch=04-val_loss=0.0114-mlp-jet_const-True-2048.ckpt"
-    #checkpoint_path = "checkpoints/transformer-event_jets-True-2048/v0-epoch=09-val_loss=0.0441-transformer-event_jets-True-2048.ckpt"
-    #checkpoint_path = "checkpoints/transformer-event_part-True-2048/v0-epoch=09-val_loss=0.0223-transformer-event_part-True-2048.ckpt"
-    checkpoint_path = "checkpoints/transformer-jet_const-True-2048/v0-epoch=06-val_loss=0.0100-transformer-jet_const-True-2048.ckpt"
+    #checkpoint_path = "checkpoints/mlp-event_jets-True-2048/v2-epoch=07-val_loss=0.0498-mlp-event_jets-True-2048.ckpt"
+    #checkpoint_path = "checkpoints/mlp-event_part-True-2048/v2-epoch=00-val_loss=0.0271-mlp-event_part-True-2048.ckpt"
+    #checkpoint_path = "checkpoints/mlp-jet_const-True-2048/v3-epoch=06-val_loss=0.0107-mlp-jet_const-True-2048.ckpt"
+    #checkpoint_path = "checkpoints/transformer-event_jets-True-2048/v2-epoch=08-val_loss=0.0455-transformer-event_jets-True-2048.ckpt"
+    #checkpoint_path = "checkpoints/transformer-event_part-True-2048/v2-epoch=07-val_loss=0.0206-transformer-event_part-True-2048.ckpt"
+    checkpoint_path = "checkpoints/transformer-jet_const-True-2048/v3-epoch=03-val_loss=0.0098-transformer-jet_const-True-2048.ckpt"
     
     model_name = cfg.model.name
     ModelClass = MODEL_REGISTRY[model_name]
