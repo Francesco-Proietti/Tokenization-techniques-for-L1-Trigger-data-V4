@@ -258,3 +258,6 @@ outputs/
 
 # Test logs
 logstest/
+
+# Notebooks folder
+notebooks/
