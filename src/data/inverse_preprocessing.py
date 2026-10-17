@@ -30,7 +30,7 @@ def inverse_preprocess(feats, mask, ev_j=False, jet_feats=None):
         feats[:,:,1] += jet_eta[:, None]
         feats[:,:,2] += jet_phi[:, None]
 
-        # wrap phi to [-pi, pi]
+        # Wrap phi to [-pi, pi]
         feats[:,:,2] = (feats[:,:,2] + torch.pi) % (2 * torch.pi) - torch.pi
 
     return feats * mask.unsqueeze(-1)

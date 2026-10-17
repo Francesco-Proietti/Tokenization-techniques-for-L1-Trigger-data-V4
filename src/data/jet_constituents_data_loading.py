@@ -204,7 +204,7 @@ class JetConstL1TriggerDataModule(pl.LightningDataModule):
         """
         Initialize the DataModule.
 
-        Args:
+        Args (in config):
             parquet_dirs_train: Directories containing training parquet files.
             parquet_dirs_val: Directories containing validation data.
             parquet_dirs_test: Directories containing test data.

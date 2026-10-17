@@ -20,7 +20,7 @@ def generate_dataset(
     max_batches: int = None
 ) -> Tuple[List[torch.Tensor], List[str], List[int]]:
     """
-    Generate tokens for a dataset.
+    Generate original features dataset for classification.
     
     Args:
         dataset: Iterable dataset
@@ -52,7 +52,7 @@ def generate_dataset(
         x_mask, l = batch
         x, mask = x_mask
 
-        # Store tokens, masks and labels 
+        # Store data, masks and labels 
         data_list.append(x.cpu())
         masks_list.append(mask.cpu())
         labels_list.append(l.cpu())
@@ -71,7 +71,6 @@ def generate_and_save_data(
     Args:
         parquet_dirs: List of directories with parquet files
         output_dir: Directory to save data
-        max_particles: Max particles per event
         batch_size: Batch size for inference
         max_events: Max events to process (None for all)
     """
@@ -90,13 +89,13 @@ def generate_and_save_data(
     )
     
 
-    # Generate tokens
-    print("Generating tokens...")
+    # Generate data
+    print("Generating data...")
     data_list, masks_list, labels_list = generate_dataset(
         dataset, max_batches=None
     )
 
-    # Save tokens
+    # Save data
     os.makedirs(output_dir, exist_ok=True)
 
     # Combine all batches

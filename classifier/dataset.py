@@ -7,7 +7,7 @@ from torch.utils.data import Subset
 
 from sklearn.model_selection import train_test_split
 
-
+# Token dataset
 class TokenDataset(Dataset):
     
     def __init__(
@@ -56,7 +56,7 @@ class TokenDataset(Dataset):
 
         return item
 
-
+# Token datamodule
 class TokenDataModule(pl.LightningDataModule):
 
     def __init__(
@@ -98,10 +98,7 @@ class TokenDataModule(pl.LightningDataModule):
 
         indices = torch.arange(len(dataset)).numpy()
 
-        # -------------------------
-        # train + val / test
-        # -------------------------
-
+        # train / test
         train_idx, test_idx = train_test_split(
             indices,
             test_size=self.test_size,

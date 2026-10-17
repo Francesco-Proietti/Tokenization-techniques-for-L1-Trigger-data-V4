@@ -21,8 +21,8 @@ from src.callbacks.histogram_plotter import HistogramPlotter, HistogramTestPlott
 )
 def main(cfg: DictConfig):
 
-    # Set seed for reproducibility
-    #pl.seed_everything(cfg.trainer.seed, workers=True)
+    # Set seed 
+    # pl.seed_everything(cfg.trainer.seed, workers=True)
 
     # ---------------------------------------------------------
     # DataModule

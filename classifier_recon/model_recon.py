@@ -4,10 +4,7 @@ import torchmetrics
 import lightning as pl
 
 
-# ============================================================
 # Transformer Encoder Block
-# ============================================================
-
 class EncoderBlock(nn.Module):
     """
     Transformer Encoder block (Pre-LayerNorm).
@@ -26,10 +23,7 @@ class EncoderBlock(nn.Module):
     ):
         super().__init__()
 
-        # -----------------------
         # Self Attention
-        # -----------------------
-
         self.ln1 = nn.LayerNorm(d_model)
 
         self.attn = nn.MultiheadAttention(
@@ -41,10 +35,7 @@ class EncoderBlock(nn.Module):
 
         self.dropout1 = nn.Dropout(dropout)
 
-        # -----------------------
         # Feed Forward
-        # -----------------------
-
         self.ln2 = nn.LayerNorm(d_model)
 
         hidden_dim = mlp_ratio * d_model
@@ -72,10 +63,7 @@ class EncoderBlock(nn.Module):
             False = token valido
         """
 
-        # -----------------------
         # Self Attention
-        # -----------------------
-
         h = self.ln1(x)
 
         h, _ = self.attn(
@@ -88,10 +76,7 @@ class EncoderBlock(nn.Module):
 
         x = x + self.dropout1(h)
 
-        # -----------------------
         # Feed Forward
-        # -----------------------
-
         h = self.ln2(x)
 
         h = self.mlp(h)
@@ -101,10 +86,7 @@ class EncoderBlock(nn.Module):
         return x
 
 
-# ============================================================
 # Transformer Encoder Backbone
-# ============================================================
-
 class EncoderBackbone(nn.Module):
     """
     Encoder-only Transformer backbone.
@@ -134,20 +116,13 @@ class EncoderBackbone(nn.Module):
         self.max_seq_len = max_seq_len
         self.cls_token = cls_token
 
-        # -----------------------------
         # Token embedding
-        # -----------------------------
-
         self.input_projection = nn.Linear(
             4,
             d_model,
         )
 
-
-        # -----------------------------
         # Positional embedding
-        # -----------------------------
-
         # +1 because of [CLS]
         self.position_embedding = nn.Embedding(
             max_seq_len + 1,
@@ -156,10 +131,7 @@ class EncoderBackbone(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-        # -----------------------------
         # CLS embedding
-        # -----------------------------
-
         self.cls_embedding = nn.Parameter(
             torch.zeros(1, 1, d_model)
         )
@@ -170,10 +142,7 @@ class EncoderBackbone(nn.Module):
             std=0.02,
         )
 
-        # -----------------------------
         # Transformer Encoder blocks
-        # -----------------------------
-
         self.blocks = nn.ModuleList(
             [
                 EncoderBlock(
@@ -186,10 +155,7 @@ class EncoderBackbone(nn.Module):
             ]
         )
 
-        # -----------------------------
         # Final normalization
-        # -----------------------------
-
         self.norm = nn.LayerNorm(d_model)
 
     def forward(
@@ -229,16 +195,11 @@ class EncoderBackbone(nn.Module):
                 f"Sequence length {L} exceeds "
                 f"max_seq_len={self.max_seq_len}"
             )
-        # -----------------------------------
+    
         # Token embeddings
-        # -----------------------------------
-
         x = self.input_projection(features)
 
-        # -----------------------------------
         # Add CLS token
-        # -----------------------------------
-
         cls = self.cls_embedding.expand(B, -1, -1)
 
         x = torch.cat(
@@ -246,10 +207,7 @@ class EncoderBackbone(nn.Module):
             dim=1,
         )
 
-        # -----------------------------------
         # Positional embeddings
-        # -----------------------------------
-
         positions = torch.arange(
             L + 1,
             device=device,
@@ -261,10 +219,7 @@ class EncoderBackbone(nn.Module):
 
         x = self.dropout(x)
 
-        # -----------------------------------
         # Attention mask
-        # -----------------------------------
-
         if attention_mask is None:
 
             key_padding_mask = None
@@ -291,10 +246,7 @@ class EncoderBackbone(nn.Module):
             # False = valid
             key_padding_mask = ~attention_mask
 
-        # -----------------------------------
         # Transformer Encoder
-        # -----------------------------------
-
         for block in self.blocks:
 
             x = block(
@@ -302,19 +254,14 @@ class EncoderBackbone(nn.Module):
                 key_padding_mask=key_padding_mask,
             )
 
-        # -----------------------------------
         # Final normalization
-        # -----------------------------------
 
         x = self.norm(x)
 
         return x
 
 
-# ============================================================
 # Encoder for Binary Classification
-# ============================================================
-
 class EncoderForClassification(nn.Module):
     """
     Encoder-only Transformer for binary classification.
@@ -348,10 +295,7 @@ class EncoderForClassification(nn.Module):
             dropout=dropout,
         )
 
-        # -----------------------------------
         # Classification head
-        # -----------------------------------
-
         self.classifier = nn.Sequential(
             nn.Linear(d_model, d_model),
             nn.GELU(),
@@ -370,25 +314,16 @@ class EncoderForClassification(nn.Module):
             attention_mask,
         )
 
-        # -----------------------------------
         # CLS representation
-        # -----------------------------------
-
         cls = hidden[:, 0]
 
-        # -----------------------------------
         # Binary classification
-        # -----------------------------------
-
         logits = self.classifier(cls)
 
         return logits.squeeze(-1)
 
 
-# ============================================================
 # Lightning Module
-# ============================================================
-
 class EncoderClassificationModule(pl.LightningModule):
 
     def __init__(
@@ -407,10 +342,7 @@ class EncoderClassificationModule(pl.LightningModule):
 
         self.save_hyperparameters()
 
-        # -----------------------------------
         # Model
-        # -----------------------------------
-
         self.model = EncoderForClassification(
             max_seq_len=max_seq_len,
             cls_token=cls_token,
@@ -421,24 +353,15 @@ class EncoderClassificationModule(pl.LightningModule):
             dropout=dropout,
         )
 
-        # -----------------------------------
         # Loss
-        # -----------------------------------
-
         self.loss_fn = nn.BCEWithLogitsLoss()
 
-        # -----------------------------------
         # Metrics
-        # -----------------------------------
-
         self.train_acc = torchmetrics.classification.BinaryAccuracy()
         self.val_acc = torchmetrics.classification.BinaryAccuracy()
         self.test_acc = torchmetrics.classification.BinaryAccuracy()
 
-    # ========================================================
     # Forward
-    # ========================================================
-
     def forward(
         self,
         features,
@@ -450,10 +373,7 @@ class EncoderClassificationModule(pl.LightningModule):
             mask,
         )
 
-    # ========================================================
     # Training
-    # ========================================================
-
     def training_step(
         self,
         batch,
@@ -504,10 +424,7 @@ class EncoderClassificationModule(pl.LightningModule):
 
         return loss
 
-    # ========================================================
     # Validation
-    # ========================================================
-
     def validation_step(
         self,
         batch,
@@ -552,10 +469,7 @@ class EncoderClassificationModule(pl.LightningModule):
             batch_size=features.size(0),
         )
 
-    # ========================================================
     # Test
-    # ========================================================
-
     def test_step(
         self,
         batch,
@@ -600,10 +514,7 @@ class EncoderClassificationModule(pl.LightningModule):
             batch_size=features.size(0),
         )
 
-    # ========================================================
     # Optimizer
-    # ========================================================
-
     def configure_optimizers(self):
 
         optimizer = torch.optim.AdamW(

@@ -23,12 +23,11 @@ def generate_tokens_for_dataset(
     max_batches: int = None
 ) -> Tuple[List[torch.Tensor], List[str], List[int]]:
     """
-    Generate tokens for a dataset.
+    Generate recon dataset for classification.
     
     Args:
         dataset: Iterable dataset
         model: Trained VQ-VAE model
-        device: Device to run on ('cuda' or 'cpu')
         max_batches: Optional limit on number of batches
         
     Returns:
@@ -63,12 +62,12 @@ def generate_tokens_for_dataset(
         x, mask = x.to(device), mask.to(device)
         l = l.to(device)
 
-        # Get tokens from model
+        # Get data from model
         with torch.no_grad():
             output = model(x, mask)
             recon = output[0]  # [B, N] - quantization indices
 
-        # Store tokens, masks and labels 
+        # Store data, masks and labels 
         data_reco_list.append(recon.cpu())
         masks_list.append(mask.cpu())
         labels_list.append(l.cpu())
@@ -90,7 +89,6 @@ def generate_and_save_tokens(
         checkpoint_path: Path to trained model checkpoint
         parquet_dirs: List of directories with parquet files
         output_dir: Directory to save tokens
-        model_type: 'mlp' or 'transformer'
         max_particles: Max particles per event
         batch_size: Batch size for inference
         max_events: Max events to process (None for all)
@@ -99,7 +97,6 @@ def generate_and_save_tokens(
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Load model
-    
     model = TransformerVQVAE.load_from_checkpoint(checkpoint_path, weights_only=False)
 
     model.to(device)
@@ -124,13 +121,13 @@ def generate_and_save_tokens(
     )
     
 
-    # Generate tokens
-    print("Generating tokens...")
+    # Generate data
+    print("Generating data...")
     data_reco_list, masks_list, labels_list = generate_tokens_for_dataset(
         dataset, model, max_batches=None
     )
 
-    # Save tokens
+    # Save data
     os.makedirs(output_dir, exist_ok=True)
 
     # Combine all batches

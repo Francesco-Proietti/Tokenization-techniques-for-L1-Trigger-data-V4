@@ -153,7 +153,7 @@ class TransformerVQVAE(pl.LightningModule):
         """
         Initialize the transformer VQ-VAE.
 
-        Args:
+        Args (in config):
             input_dim: Dimension of input features.
             latent_dim: Dimension of the latent space.
             codebook_size: Number of codebook vectors.
@@ -226,27 +226,9 @@ class TransformerVQVAE(pl.LightningModule):
         
         z_e = self.encoder(x, mask)
 
-        #flat_mask = mask.view(-1)
-
-        #flat_z_e = z_e.view(-1, self.latent_dim)
-
-        #valid_z_e = flat_z_e[flat_mask]
-
-        #valid_z_e_3d = valid_z_e.unsqueeze(0)
-
         z_q, indices, commit_loss = self.quantizer(z_e, mask=mask)
 
-        #z_q_valid = z_q.squeeze(0)
-
-        #z_q_padded = torch.zeros_like(flat_z_e)
-
-        #z_q_padded[flat_mask] = z_q_valid
-
-        #z_q = z_q_padded.view(B, N, -1)
-        
         x_recon = self.decoder(z_q, mask)
-
-        #x_recon = x_recon * mask.unsqueeze(-1)
 
         return x_recon, commit_loss, indices
 

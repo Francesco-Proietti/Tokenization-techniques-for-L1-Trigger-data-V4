@@ -24,8 +24,9 @@ class HistogramPlotter(pl.Callback):
         """
         Args:
             data_loading: String indicating the type of data loading used
+            cb_size: number of codebook vectors
             model_name: Name of the model being trained
-            rotation: String indicating if thr rotation trick is used
+            rotation: indicating if the rotation trick is used
             output_dir: Directory to save plots
             log_every_n_epochs: How often to generate plots
             max_samples: Maximum number of samples to use for plotting (for memory efficiency)
@@ -243,9 +244,7 @@ class HistogramTestPlotter(pl.Callback):
         self.jet_feats = []
         self.idx = []
 
-    # ---------------------------------------------------------
-    # TEST
-    # ---------------------------------------------------------
+    # Test
 
     def on_test_batch_end(
         self,
@@ -266,7 +265,6 @@ class HistogramTestPlotter(pl.Callback):
         else:
             x, mask = batch
 
-        # Expected:
         # outputs = (reconstruction, quantization_indices)
         reconstruction, idx = outputs
 
@@ -291,9 +289,7 @@ class HistogramTestPlotter(pl.Callback):
         Create histograms at the end of the test epoch.
         """
 
-        # -----------------------------------------------------
         # Concatenate all batches
-        # -----------------------------------------------------
 
         original = torch.cat(
             self.originals,
@@ -323,9 +319,7 @@ class HistogramTestPlotter(pl.Callback):
         else:
             jet_feats = None
 
-        # -----------------------------------------------------
         # Limit number of samples
-        # -----------------------------------------------------
 
         if self.max_samples is not None:
 
@@ -342,9 +336,7 @@ class HistogramTestPlotter(pl.Callback):
             if jet_feats is not None:
                 jet_feats = jet_feats[:n]
 
-        # -----------------------------------------------------
         # Inverse preprocessing
-        # -----------------------------------------------------
 
         original_post = inverse_preprocess(
             original,
@@ -360,9 +352,7 @@ class HistogramTestPlotter(pl.Callback):
             jet_feats if self.data_loading == "jet_const" else None
         )
 
-        # -----------------------------------------------------
         # Apply mask and flatten
-        # -----------------------------------------------------
 
         orig_flat = original[mask].cpu()
         orig_post_flat = original_post[mask].cpu()
@@ -372,9 +362,7 @@ class HistogramTestPlotter(pl.Callback):
 
         idx_flat = idx[mask].cpu()
 
-        # -----------------------------------------------------
         # Create plots
-        # -----------------------------------------------------
 
         fig_pre = self._create_histograms(
             orig_flat,
@@ -404,9 +392,7 @@ class HistogramTestPlotter(pl.Callback):
             idx_flat
         )
 
-        # -----------------------------------------------------
         # Log to TensorBoard
-        # -----------------------------------------------------
 
         if hasattr(pl_module, "logger") and pl_module.logger:
 
@@ -440,9 +426,7 @@ class HistogramTestPlotter(pl.Callback):
                 trainer.global_step
             )
 
-        # -----------------------------------------------------
         # Save plots to disk
-        # -----------------------------------------------------
 
         os.makedirs(
             self.output_dir,
@@ -515,9 +499,7 @@ class HistogramTestPlotter(pl.Callback):
 
         plt.close(fig_cb)
 
-        # -----------------------------------------------------
         # Clear stored data
-        # -----------------------------------------------------
 
         self.originals.clear()
         self.reconstructions.clear()
@@ -525,9 +507,7 @@ class HistogramTestPlotter(pl.Callback):
         self.jet_feats.clear()
         self.idx.clear()
 
-    # ---------------------------------------------------------
-    # HISTOGRAMS
-    # ---------------------------------------------------------
+    # Histograms
 
     def _create_histograms(
         self,
@@ -573,9 +553,7 @@ class HistogramTestPlotter(pl.Callback):
                 "blue"
             ]
 
-        # -----------------------------------------------------
         # Create figure
-        # -----------------------------------------------------
 
         fig, axes = plt.subplots(
             1,
@@ -586,9 +564,7 @@ class HistogramTestPlotter(pl.Callback):
         if n_features == 1:
             axes = [axes]
 
-        # -----------------------------------------------------
         # Plot each feature
-        # -----------------------------------------------------
 
         for i, (feat_name, ax) in enumerate(
             zip(feature_names, axes)
@@ -643,9 +619,7 @@ class HistogramTestPlotter(pl.Callback):
             ax.set_ylabel("Density")
             ax.legend()
 
-        # -----------------------------------------------------
         # Title
-        # -----------------------------------------------------
 
         stage = "postprocessed" if post else "preprocessed"
 
@@ -697,18 +671,14 @@ class HistogramTestPlotter(pl.Callback):
 
             colors = ["orange","red","blue"]
 
-        # -----------------------------------------------------
         # Compute residuals
-        # -----------------------------------------------------
 
         residuals = original - reconstruction
 
         if post:
             residuals[:,2] = (residuals[:,2] + torch.pi) % (2 * torch.pi) - torch.pi
 
-        # -----------------------------------------------------
         # Create figure
-        # -----------------------------------------------------
 
         fig, axes = plt.subplots(
             1,
@@ -719,9 +689,7 @@ class HistogramTestPlotter(pl.Callback):
         if n_features == 1:
             axes = [axes]
 
-        # -----------------------------------------------------
         # Plot each feature
-        # -----------------------------------------------------
 
         for i, (feat_name, ax) in enumerate(
             zip(feature_names, axes)
@@ -789,9 +757,7 @@ class HistogramTestPlotter(pl.Callback):
                 rf"$\sigma={std:.3g}$"
             )
 
-        # -----------------------------------------------------
         # Title
-        # -----------------------------------------------------
 
         stage = "postprocessed" if post else "preprocessed"
 
@@ -807,9 +773,7 @@ class HistogramTestPlotter(pl.Callback):
         return fig
 
 
-    # ---------------------------------------------------------
-    # CODEBOOK USAGE
-    # ---------------------------------------------------------
+    # Codebook usage
 
     def _create_cb_usage(self, idx):
         """Create codebook usage plot."""

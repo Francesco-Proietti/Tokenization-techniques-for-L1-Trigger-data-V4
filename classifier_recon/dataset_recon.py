@@ -7,7 +7,7 @@ from torch.utils.data import Subset
 
 from sklearn.model_selection import train_test_split
 
-
+# Reconstructed features dataset for classification
 class ReconDataset(Dataset):
     
     def __init__(
@@ -52,7 +52,7 @@ class ReconDataset(Dataset):
 
         return item
 
-
+# Reconstructed features datamodule for classification
 class ReconDataModule(pl.LightningDataModule):
 
     def __init__(
@@ -91,10 +91,7 @@ class ReconDataModule(pl.LightningDataModule):
 
         indices = torch.arange(len(dataset)).numpy()
 
-        # -------------------------
         # train + val / test
-        # -------------------------
-
         train_idx, test_idx = train_test_split(
             indices,
             test_size=self.test_size,
