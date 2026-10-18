@@ -18,8 +18,20 @@ The project uses PyTorch Lightning and aims to:
 | File | Description |
 |------|-------------|
 | `train_VQ_VAE.py` | Training script that orchestrates data loading, model initialization, and PyTorch Lightning training |
+| `test_VQ_VAE.py` | Testing script of VQ-VAes |
 | `environment.yaml` | Conda environment specification with all dependencies |
 | `tokenizer.py` | Tokenization script that, given a lightning checkpoint, produces the tokens |
+
+### Classification Files
+
+| File | Description |
+|------|-------------|
+| `train_classifier.py` | Training script of the classifier using quantization indices as tokens |
+| `data_class_recon.py` | Prepare the reconstructed data used for classification |
+| `train_classifier_recon.py` | Training script of the classifier using compressed and reconstructed data |
+| `data_baseline.py` | Prepare the original data used for classification |
+| `train_classifier_baseline.py` | Training script of the classifier using original data |
+
 
 ### Configuration Files (`configs/`)
 
@@ -45,13 +57,34 @@ The configuration system uses Hydra's compositional config pattern:
 | `src/data/event_particles_data_loading.py` | `L1TriggerDataset` (IterableDataset for streaming parquet files) and `L1TriggerDataModule` (LightningDataModule for train/val/test splits) |
 | `src/data/jet_constituents_data_loading.py` | `L1TriggerDataset` (IterableDataset for streaming parquet files) and `L1TriggerDataModule` (LightningDataModule for train/val/test splits) |
 
-#### Models (`src/models/`)
+#### VQ-VAE Models (`src/models/`)
 
 | File | Description |
 |------|-------------|
 | `src/models/registry.py` | Model registry mapping names ("mlp", "transformer") to classes |
 | `src/models/mlp_vqvae.py` | MLP-based VQ-VAE |
 | `src/models/transformer_vqvae.py` | Transformer-based VQ-VAE |
+
+#### Token classification (`classifier/`)
+
+| File | Description |
+|------|-------------|
+| `classifier_model.py` | PyTorch Lightning classification model (Tokens) |
+| `dataset.py` | Classification dataloader (Tokens) |
+
+#### Reconstructed data classification (`classifier_baseline/`)
+
+| File | Description |
+|------|-------------|
+| `model_recon.py` | PyTorch Lightning classification model (Reconstructed data) |
+| `dataset_recon.py` | Classification dataloader (Reconstructed data) |
+
+#### Original data classification (`classifier_recon/`)
+
+| File | Description |
+|------|-------------|
+| `model_baseline.py` | PyTorch Lightning classification model (Original data) |
+| `dataset_base.py` | Classification dataloader (Original data) |
 
 ## Data Format
 
@@ -88,7 +121,7 @@ The dataset expects Parquet files containing L1T PUPPI particles and jets with f
 
 Constituents are padded to `max_particles` (default:64) with a mask indicating valid entries.
 
-## Usage
+## Example of usage
 
 ```bash
 # Train with default config
@@ -105,3 +138,6 @@ python tokenizer.py --checkpoint checkpoints/transformer-event_jets-True-1024/v0
 ## Dependencies
 
 Install via: `conda env create -f environment.yaml`
+
+
+
