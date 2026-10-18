@@ -65,6 +65,8 @@ The configuration system uses Hydra's compositional config pattern:
 | `src/models/mlp_vqvae.py` | MLP-based VQ-VAE |
 | `src/models/transformer_vqvae.py` | Transformer-based VQ-VAE |
 
+### Classification Code 
+
 #### Token classification (`classifier/`)
 
 | File | Description |
